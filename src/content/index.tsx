@@ -1,31 +1,50 @@
+const EXPLAIN_BUTTON_ID = "phantom-btn";
+
+function isRuntimeAvailable() {
+  return Boolean(globalThis.chrome?.runtime?.id && chrome.runtime.sendMessage);
+}
+
+async function safeSendMessage(message: unknown) {
+  if (!isRuntimeAvailable()) return null;
+
+  try {
+    return await chrome.runtime.sendMessage(message);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("Extension context invalidated")) {
+      console.warn("Extension message failed:", error);
+    }
+    return null;
+  }
+}
+
 document.addEventListener("mouseup", () => {
   const selected = window.getSelection()?.toString().trim();
-  console.log("Selected text:", selected); // ← add this
 
   if (!selected || selected.length < 10) return;
 
-  chrome.runtime
-    .sendMessage({ type: "GET_MODEL_READY" })
+  safeSendMessage({ type: "GET_MODEL_READY" })
     .then((response) => {
-      if (!response?.ready) {
-        document.getElementById("phantom-btn")?.remove();
+      if (!(response as { ready?: boolean } | null)?.ready) {
+        document.getElementById(EXPLAIN_BUTTON_ID)?.remove();
         return;
       }
       showExplainButton(selected);
     })
     .catch(() => {
-      document.getElementById("phantom-btn")?.remove();
+      document.getElementById(EXPLAIN_BUTTON_ID)?.remove();
     });
 });
 
 // Hide button when clicking elsewhere
 document.addEventListener("mousedown", (e) => {
-  const btn = document.getElementById("phantom-btn");
-  if (btn && e.target !== btn) btn.remove();
+  const btn = document.getElementById(EXPLAIN_BUTTON_ID);
+  const target = e.target as Node | null;
+  if (btn && target && !btn.contains(target)) btn.remove();
 });
 
 function showExplainButton(code: string) {
-  document.getElementById("phantom-btn")?.remove();
+  document.getElementById(EXPLAIN_BUTTON_ID)?.remove();
 
   const selection = window.getSelection();
   if (!selection?.rangeCount) return;
@@ -33,7 +52,7 @@ function showExplainButton(code: string) {
   const rect = selection.getRangeAt(0).getBoundingClientRect();
 
   const btn = document.createElement("button");
-  btn.id = "phantom-btn";
+  btn.id = EXPLAIN_BUTTON_ID;
   btn.innerText = "⚡ Explain";
   Object.assign(btn.style, {
     position: "fixed",
@@ -52,11 +71,11 @@ function showExplainButton(code: string) {
     letterSpacing: "1px",
   });
 
-  btn.onclick = () => {
+  btn.onclick = async () => {
     btn.remove();
 
     // Send code AND trigger explain in one message
-    chrome.runtime.sendMessage({
+    await safeSendMessage({
       type: "EXPLAIN_NOW",
       code,
     });
