@@ -3,7 +3,19 @@ document.addEventListener("mouseup", () => {
   console.log("Selected text:", selected); // ← add this
 
   if (!selected || selected.length < 10) return;
-  showExplainButton(selected);
+
+  chrome.runtime
+    .sendMessage({ type: "GET_MODEL_READY" })
+    .then((response) => {
+      if (!response?.ready) {
+        document.getElementById("phantom-btn")?.remove();
+        return;
+      }
+      showExplainButton(selected);
+    })
+    .catch(() => {
+      document.getElementById("phantom-btn")?.remove();
+    });
 });
 
 // Hide button when clicking elsewhere

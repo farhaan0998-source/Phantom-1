@@ -23,6 +23,7 @@ export default function Popup() {
         },
       );
       setReady(true);
+      chrome.runtime.sendMessage({ type: "MODEL_READY" }).catch(() => {});
     }
     loadEngine();
 
