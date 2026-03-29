@@ -155,8 +155,4 @@ Enabling developers to build AI-powered applications with:
 * Keep your code private
 * Work without limits
 
-<<<<<<< HEAD
----
-=======
----
->>>>>>> d848f553271c279191680eab059c5339bfa60f3c
+
